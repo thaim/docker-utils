@@ -1,0 +1,50 @@
+#!/bin/sh
+# show all tags for specified repository
+
+registry='https://registry.hub.docker.com'
+
+
+usage() {
+    echo "Usage: $0 [-r registry] [namespace/]repository" >&2
+}
+
+
+set -- `getopt r: $*`
+if [ $? != 0 ]; then
+    usage
+    exit 1
+fi
+
+for OPT in $*; do
+    case $OPT in
+        -r) registry=$2
+            shift 2
+            ;;
+        --) shift
+            break
+            ;;
+    esac
+done
+
+
+if [ $# != 1 ]; then
+    usage
+    exit 1
+fi
+
+target=$1
+
+# echo "registry=${registry}"
+# echo "target=${target}"
+
+tags=`curl -s $registry/v1/repositories/${target}/tags`
+
+echo "target=$target"
+echo "tags\t hash"
+echo "----------------"
+echo $tags | jq -r '.[] | [.layer, .name] | @csv' | while read line
+do
+    #    echo $line | sed -e 's/"\([a-z0-9]*\)","\([a-z0-9._-\)"/$2_$1/'
+    echo $line | sed -e 's/"\([^"]*\)","\([^"]*\)"/\2\t(\1)/'
+done
+
